@@ -1,0 +1,62 @@
+📦 order-service (FINAL VERSION)
+pom.xml
+<dependencies>
+  <dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-web</artifactId>
+  </dependency>
+
+  <dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+  </dependency>
+</dependencies>
+AppConfig.java
+package com.example.order;
+
+import org.springframework.context.annotation.*;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.cloud.client.loadbalancer.LoadBalanced;
+
+@Configuration
+public class AppConfig {
+
+    @Bean
+    @LoadBalanced
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
+    }
+}
+OrderController.java
+package com.example.order;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
+
+@RestController
+@RequestMapping("/orders")
+public class OrderController {
+
+    @Autowired
+    private RestTemplate restTemplate;
+
+    @GetMapping("/{id}")
+    public String getOrder(@PathVariable int id) {
+        try {
+            String user = restTemplate.getForObject(
+                    "http://USER-SERVICE/users/" + id,
+                    String.class
+            );
+
+            return "Order ID: " + id + " | " + user;
+
+        } catch (Exception e) {
+            return "Order ID: " + id + " | User Service Down";
+        }
+    }
+}
+application.properties
+spring.application.name=ORDER-SERVICE
+server.port=8082
+eureka.client.service-url.defaultZone=http://localhost:8761/eureka/
