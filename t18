@@ -1,0 +1,201 @@
+📦 user-service (WITH TESTS)
+✅ pom.xml (ADD TEST DEPENDENCIES)
+<dependencies>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+
+    <!-- TEST -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-test</artifactId>
+    </dependency>
+</dependencies>
+✅ UserService.java
+package com.example.user;
+
+import org.springframework.stereotype.Service;
+
+@Service
+public class UserService {
+
+    public String getUser(int id) {
+        return "User ID: " + id;
+    }
+}
+✅ UserController.java
+package com.example.user;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/users")
+public class UserController {
+
+    @Autowired
+    private UserService service;
+
+    @GetMapping("/{id}")
+    public String getUser(@PathVariable int id) {
+        return service.getUser(id);
+    }
+}
+🧪 UserServiceTest.java
+package com.example.user;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
+
+public class UserServiceTest {
+
+    private final UserService service = new UserService();
+
+    @Test
+    void testGetUser() {
+        String result = service.getUser(1);
+        assertEquals("User ID: 1", result);
+    }
+}
+🧪 UserControllerTest.java
+package com.example.user;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@WebMvcTest(UserController.class)
+public class UserControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockBean
+    private UserService service;
+
+    @Test
+    void testGetUser() throws Exception {
+        when(service.getUser(1)).thenReturn("User ID: 1");
+
+        mockMvc.perform(get("/users/1"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("User ID: 1"));
+    }
+}
+📦 order-service (WITH TESTS)
+✅ pom.xml
+<dependencies>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+
+    <!-- TEST -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-test</artifactId>
+    </dependency>
+</dependencies>
+✅ OrderService.java
+package com.example.order;
+
+import org.springframework.stereotype.Service;
+
+@Service
+public class OrderService {
+
+    public String getOrder(int id) {
+        return "Order ID: " + id;
+    }
+}
+✅ OrderController.java
+package com.example.order;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
+
+@RestController
+@RequestMapping("/orders")
+public class OrderController {
+
+    @Autowired
+    private RestTemplate restTemplate;
+
+    @Autowired
+    private OrderService service;
+
+    @GetMapping("/{id}")
+    public String getOrder(@PathVariable int id) {
+        try {
+            String user = restTemplate.getForObject(
+                    "http://USER-SERVICE/users/" + id,
+                    String.class
+            );
+            return service.getOrder(id) + " | " + user;
+        } catch (Exception e) {
+            return "Service Down";
+        }
+    }
+}
+🧪 OrderServiceTest.java
+package com.example.order;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
+
+public class OrderServiceTest {
+
+    private final OrderService service = new OrderService();
+
+    @Test
+    void testGetOrder() {
+        String result = service.getOrder(1);
+        assertEquals("Order ID: 1", result);
+    }
+}
+🧪 OrderControllerTest.java
+package com.example.order;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.test.web.servlet.MockMvc;
+
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@WebMvcTest(OrderController.class)
+public class OrderControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockBean
+    private RestTemplate restTemplate;
+
+    @MockBean
+    private OrderService service;
+
+    @Test
+    void testGetOrder() throws Exception {
+        when(restTemplate.getForObject("http://USER-SERVICE/users/1", String.class))
+                .thenReturn("User ID: 1");
+
+        when(service.getOrder(1)).thenReturn("Order ID: 1");
+
+        mockMvc.perform(get("/orders/1"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("Order ID: 1 | User ID: 1"));
+    }
+}
